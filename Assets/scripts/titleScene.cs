@@ -23,7 +23,7 @@ public class titleScene : MonoBehaviour
     [SerializeField] private float fadeDuration = 1f;
 
     private bool isTransitioning = false;
-    //커밋실험용 주석
+    //커밋실험용 주석 한번더 테스트
     void Start()
     {
         if (fadePanel != null)
