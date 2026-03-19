@@ -523,17 +523,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DialogueIntro
   textBoxCanvasGroup: {fileID: 845308719}
   dialogueText: {fileID: 1353963282}
+  speakerText: {fileID: 0}
   warriorObject: {fileID: 1147960001}
   warriorAnimator: {fileID: 1147960004}
   idleStateName: idle
   fallStateName: fall
-  message: "........\uC774\uC81C \uACE7 \uB9C8\uAC10\uC774\uB124"
+  protagonistOpeningLine: "........\uC774\uC81C \uACE7 \uB9C8\uAC10\uC774\uB124"
+  protagonistReactionLine: ...!
+  adventurerLine: "....\uD790 \uD3EC\uC158 \uD558\uB098"
+  protagonistName: "\uC8FC\uC778\uACF5"
+  adventurerName: "\uBAA8\uD5D8\uAC00"
   startDelay: 6
   fadeDuration: 1
   typingSpeed: 0.05
-  afterTypingWait: 1
+  afterOpeningLineWait: 0.8
   warriorAppearDelay: 1
   idleDurationBeforeFall: 2
+  afterFallWait: 0.5
+  afterReactionLineWait: 0
+  afterAdventurerLineWait: 1.2
 --- !u!4 &1230911139
 Transform:
   m_ObjectHideFlags: 0

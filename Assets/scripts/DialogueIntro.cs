@@ -7,6 +7,7 @@ public class DialogueIntro : MonoBehaviour
     [Header("References")]
     [SerializeField] private CanvasGroup textBoxCanvasGroup;
     [SerializeField] private TextMeshProUGUI dialogueText;
+    [SerializeField] private TextMeshProUGUI speakerText; // 없으면 비워둬도 됨
 
     [Header("Warrior")]
     [SerializeField] private GameObject warriorObject;
@@ -16,29 +17,49 @@ public class DialogueIntro : MonoBehaviour
     [SerializeField] private string idleStateName = "idle";
     [SerializeField] private string fallStateName = "fall";
 
-    [Header("Dialogue Settings")]
+    [Header("Dialogue Lines")]
     [TextArea(2, 5)]
-    [SerializeField] private string message = "........이제 곧 마감이네";
+    [SerializeField] private string protagonistOpeningLine = "........이제 곧 마감이네";
 
+    [TextArea(2, 5)]
+    [SerializeField] private string protagonistReactionLine = "...!";
+
+    [TextArea(2, 5)]
+    [SerializeField] private string adventurerLine = "....힐 포션 하나";
+
+    [Header("Speaker Names")]
+    [SerializeField] private string protagonistName = "주인공";
+    [SerializeField] private string adventurerName = "모험가";
+
+    [Header("Dialogue Settings")]
     [SerializeField] private float startDelay = 3f;
     [SerializeField] private float fadeDuration = 0.4f;
     [SerializeField] private float typingSpeed = 0.05f;
 
     [Header("Sequence Timing")]
-    [SerializeField] private float afterTypingWait = 0.8f;
+    [SerializeField] private float afterOpeningLineWait = 0.8f;
     [SerializeField] private float warriorAppearDelay = 0.2f;
     [SerializeField] private float idleDurationBeforeFall = 1.2f;
+    [SerializeField] private float afterFallWait = 0.5f;
+    [SerializeField] private float afterReactionLineWait = 0.6f;
+    [SerializeField] private float afterAdventurerLineWait = 1.2f;
 
     private void Start()
     {
         if (textBoxCanvasGroup != null)
         {
             textBoxCanvasGroup.alpha = 0f;
+            textBoxCanvasGroup.gameObject.SetActive(true);
         }
 
         if (dialogueText != null)
         {
             dialogueText.text = "";
+        }
+
+        if (speakerText != null)
+        {
+            speakerText.text = "";
         }
 
         if (warriorObject != null)
@@ -51,21 +72,27 @@ public class DialogueIntro : MonoBehaviour
 
     private IEnumerator ShowDialogueRoutine()
     {
+        // 1. 시작 대기
         yield return new WaitForSeconds(startDelay);
 
+        // 2. 대화창 등장
         yield return StartCoroutine(FadeCanvasGroup(0f, 1f));
 
-        yield return StartCoroutine(TypeText(message));
+        // 3. 주인공 첫 대사
+        yield return StartCoroutine(ShowLine(protagonistName, protagonistOpeningLine));
 
-        yield return new WaitForSeconds(afterTypingWait);
+        yield return new WaitForSeconds(afterOpeningLineWait);
 
+        // 4. 대화창 사라짐
         yield return StartCoroutine(FadeCanvasGroup(1f, 0f));
 
+        // 필요하면 비활성화
         if (textBoxCanvasGroup != null)
         {
             textBoxCanvasGroup.gameObject.SetActive(false);
         }
 
+        // 5. 모험가 등장
         yield return new WaitForSeconds(warriorAppearDelay);
 
         if (warriorObject != null)
@@ -73,6 +100,7 @@ public class DialogueIntro : MonoBehaviour
             warriorObject.SetActive(true);
         }
 
+        // 6. idle 재생
         yield return null;
 
         if (warriorAnimator != null)
@@ -80,12 +108,46 @@ public class DialogueIntro : MonoBehaviour
             warriorAnimator.Play(idleStateName, 0, 0f);
         }
 
+        // 7. 잠깐 뒤 fall 재생
         yield return new WaitForSeconds(idleDurationBeforeFall);
 
         if (warriorAnimator != null)
         {
             warriorAnimator.Play(fallStateName, 0, 0f);
         }
+
+        // 8. fall 후 잠시 대기
+        yield return new WaitForSeconds(afterFallWait);
+
+        // 9. 대화창 다시 등장
+        if (textBoxCanvasGroup != null)
+        {
+            textBoxCanvasGroup.gameObject.SetActive(true);
+        }
+
+        yield return StartCoroutine(FadeCanvasGroup(0f, 1f));
+
+        // 10. 주인공 반응
+        yield return StartCoroutine(ShowLine(protagonistName, protagonistReactionLine));
+
+        yield return new WaitForSeconds(afterReactionLineWait);
+
+        // 11. 모험가 대사
+        yield return StartCoroutine(ShowLine(adventurerName, adventurerLine));
+
+        yield return new WaitForSeconds(afterAdventurerLineWait);
+
+        // 여기서 다음 컷씬으로 이어가면 됨
+    }
+
+    private IEnumerator ShowLine(string speaker, string line)
+    {
+        if (speakerText != null)
+        {
+            speakerText.text = speaker;
+        }
+
+        yield return StartCoroutine(TypeText(line));
     }
 
     private IEnumerator FadeCanvasGroup(float from, float to)
