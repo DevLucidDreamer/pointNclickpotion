@@ -535,12 +535,12 @@ MonoBehaviour:
   adventurerName: "\uBAA8\uD5D8\uAC00"
   startDelay: 6
   fadeDuration: 1
-  typingSpeed: 0.05
+  typingSpeed: 0.1
   afterOpeningLineWait: 0.8
   warriorAppearDelay: 1
   idleDurationBeforeFall: 2
   afterFallWait: 0.5
-  afterReactionLineWait: 0
+  afterReactionLineWait: 0.5
   afterAdventurerLineWait: 1.2
 --- !u!4 &1230911139
 Transform:

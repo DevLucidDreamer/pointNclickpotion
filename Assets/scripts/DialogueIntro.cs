@@ -7,7 +7,7 @@ public class DialogueIntro : MonoBehaviour
     [Header("References")]
     [SerializeField] private CanvasGroup textBoxCanvasGroup;
     [SerializeField] private TextMeshProUGUI dialogueText;
-    [SerializeField] private TextMeshProUGUI speakerText; // 없으면 비워둬도 됨
+    [SerializeField] private TextMeshProUGUI speakerText;
 
     [Header("Warrior")]
     [SerializeField] private GameObject warriorObject;
@@ -52,15 +52,7 @@ public class DialogueIntro : MonoBehaviour
             textBoxCanvasGroup.gameObject.SetActive(true);
         }
 
-        if (dialogueText != null)
-        {
-            dialogueText.text = "";
-        }
-
-        if (speakerText != null)
-        {
-            speakerText.text = "";
-        }
+        ClearDialogueUI();
 
         if (warriorObject != null)
         {
@@ -76,6 +68,7 @@ public class DialogueIntro : MonoBehaviour
         yield return new WaitForSeconds(startDelay);
 
         // 2. 대화창 등장
+        ClearDialogueUI();
         yield return StartCoroutine(FadeCanvasGroup(0f, 1f));
 
         // 3. 주인공 첫 대사
@@ -86,7 +79,6 @@ public class DialogueIntro : MonoBehaviour
         // 4. 대화창 사라짐
         yield return StartCoroutine(FadeCanvasGroup(1f, 0f));
 
-        // 필요하면 비활성화
         if (textBoxCanvasGroup != null)
         {
             textBoxCanvasGroup.gameObject.SetActive(false);
@@ -120,9 +112,12 @@ public class DialogueIntro : MonoBehaviour
         yield return new WaitForSeconds(afterFallWait);
 
         // 9. 대화창 다시 등장
+        ClearDialogueUI();
+
         if (textBoxCanvasGroup != null)
         {
             textBoxCanvasGroup.gameObject.SetActive(true);
+            textBoxCanvasGroup.alpha = 0f;
         }
 
         yield return StartCoroutine(FadeCanvasGroup(0f, 1f));
@@ -136,8 +131,19 @@ public class DialogueIntro : MonoBehaviour
         yield return StartCoroutine(ShowLine(adventurerName, adventurerLine));
 
         yield return new WaitForSeconds(afterAdventurerLineWait);
+    }
 
-        // 여기서 다음 컷씬으로 이어가면 됨
+    private void ClearDialogueUI()
+    {
+        if (dialogueText != null)
+        {
+            dialogueText.text = "";
+        }
+
+        if (speakerText != null)
+        {
+            speakerText.text = "";
+        }
     }
 
     private IEnumerator ShowLine(string speaker, string line)
