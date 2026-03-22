@@ -27,6 +27,9 @@ public class DialogueIntro : MonoBehaviour
     [TextArea(2, 5)]
     [SerializeField] private string adventurerLine = "....힐 포션 하나";
 
+    [TextArea(2, 5)]
+    [SerializeField] private string protagonistResponseLine = "알겠습니다. 잠시만 기다려주세요.";
+
     [Header("Speaker Names")]
     [SerializeField] private string protagonistName = "주인공";
     [SerializeField] private string adventurerName = "모험가";
@@ -43,6 +46,7 @@ public class DialogueIntro : MonoBehaviour
     [SerializeField] private float afterFallWait = 0.5f;
     [SerializeField] private float afterReactionLineWait = 0.6f;
     [SerializeField] private float afterAdventurerLineWait = 1.2f;
+    [SerializeField] private float afterProtagonistResponseWait = 1.0f;
 
     private void Start()
     {
@@ -131,6 +135,11 @@ public class DialogueIntro : MonoBehaviour
         yield return StartCoroutine(ShowLine(adventurerName, adventurerLine));
 
         yield return new WaitForSeconds(afterAdventurerLineWait);
+
+        // 12. 주인공 응답
+        yield return StartCoroutine(ShowLine(protagonistName, protagonistResponseLine));
+
+        yield return new WaitForSeconds(afterProtagonistResponseWait);
     }
 
     private void ClearDialogueUI()
