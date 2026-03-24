@@ -1,21 +1,37 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class DialogueIntro : MonoBehaviour
 {
-    [Header("References")]
+    [Header("Dialogue UI")]
     [SerializeField] private CanvasGroup textBoxCanvasGroup;
     [SerializeField] private TextMeshProUGUI dialogueText;
     [SerializeField] private TextMeshProUGUI speakerText;
 
+    [Header("Background")]
+    [SerializeField] private SpriteRenderer backgroundRenderer;
+    [SerializeField] private Sprite closedDoorBackground;
+    [SerializeField] private Sprite openedDoorBackground;
+
     [Header("Warrior")]
     [SerializeField] private GameObject warriorObject;
     [SerializeField] private Animator warriorAnimator;
-
-    [Header("Animation State Names")]
+    [SerializeField] private Transform warriorSpawnPoint;
     [SerializeField] private string idleStateName = "idle";
     [SerializeField] private string fallStateName = "fall";
+
+    [Header("Door SFX")]
+    [SerializeField] private AudioSource sfxAudioSource;
+    [SerializeField] private AudioClip doorOpenSfx;
+
+    [Header("Potion Tutorial UI")]
+    [SerializeField] private Button potionCraftButton;
+    [SerializeField] private CanvasGroup tutorialDimCanvasGroup;
+    [SerializeField] private TextMeshProUGUI tutorialGuideText;
+    [SerializeField] private string tutorialGuideMessage = "포션 제작 버튼을 누르세요";
+    [SerializeField] private GameObject potionCraftPanel;
 
     [Header("Dialogue Lines")]
     [TextArea(2, 5)]
@@ -34,77 +50,109 @@ public class DialogueIntro : MonoBehaviour
     [SerializeField] private string protagonistName = "주인공";
     [SerializeField] private string adventurerName = "모험가";
 
-    [Header("Dialogue Settings")]
+    [Header("Timing")]
     [SerializeField] private float startDelay = 3f;
-    [SerializeField] private float fadeDuration = 0.4f;
+    [SerializeField] private float textBoxFadeDuration = 0.4f;
     [SerializeField] private float typingSpeed = 0.05f;
+    [SerializeField] private float afterOpeningLineWait = 0.6f;
+    [SerializeField] private float afterDoorOpenWait = 0.15f;
+    [SerializeField] private float idleDurationBeforeFall = 1.1f;
+    [SerializeField] private float afterFallWait = 0.35f;
+    [SerializeField] private float afterReactionLineWait = 0.45f;
+    [SerializeField] private float afterAdventurerLineWait = 0.75f;
+    [SerializeField] private float afterResponseLineWait = 0.6f;
+    [SerializeField] private float tutorialFadeDuration = 0.25f;
 
-    [Header("Sequence Timing")]
-    [SerializeField] private float afterOpeningLineWait = 0.8f;
-    [SerializeField] private float warriorAppearDelay = 0.2f;
-    [SerializeField] private float idleDurationBeforeFall = 1.2f;
-    [SerializeField] private float afterFallWait = 0.5f;
-    [SerializeField] private float afterReactionLineWait = 0.6f;
-    [SerializeField] private float afterAdventurerLineWait = 1.2f;
-    [SerializeField] private float afterProtagonistResponseWait = 1.0f;
+    [Header("Tutorial Pulse")]
+    [SerializeField] private float buttonPulseSpeed = 3.2f;
+    [SerializeField] private float buttonPulseScale = 0.06f;
+
+    private bool tutorialActive = false;
+    private Vector3 potionButtonBaseScale = Vector3.one;
 
     private void Start()
     {
         if (textBoxCanvasGroup != null)
         {
-            textBoxCanvasGroup.alpha = 0f;
             textBoxCanvasGroup.gameObject.SetActive(true);
+            textBoxCanvasGroup.alpha = 0f;
+            textBoxCanvasGroup.blocksRaycasts = false;
+            textBoxCanvasGroup.interactable = false;
         }
 
         ClearDialogueUI();
+        ApplyClosedBackground();
 
         if (warriorObject != null)
         {
             warriorObject.SetActive(false);
         }
 
+        if (potionCraftButton != null)
+        {
+            potionCraftButton.gameObject.SetActive(false);
+            potionCraftButton.onClick.RemoveListener(OnPotionCraftButtonClicked);
+            potionCraftButton.onClick.AddListener(OnPotionCraftButtonClicked);
+            potionButtonBaseScale = potionCraftButton.transform.localScale;
+        }
+
+        if (tutorialGuideText != null)
+        {
+            tutorialGuideText.text = "";
+            tutorialGuideText.raycastTarget = false;
+        }
+
+        HideTutorialImmediate();
+
+        if (potionCraftPanel != null)
+        {
+            potionCraftPanel.SetActive(false);
+        }
+
         StartCoroutine(ShowDialogueRoutine());
+    }
+
+    private void Update()
+    {
+        if (!tutorialActive || potionCraftButton == null)
+            return;
+
+        float t = (Mathf.Sin(Time.unscaledTime * buttonPulseSpeed) + 1f) * 0.5f;
+        float scale = 1f + (t * buttonPulseScale);
+        potionCraftButton.transform.localScale = potionButtonBaseScale * scale;
     }
 
     private IEnumerator ShowDialogueRoutine()
     {
-        // 1. 시작 대기
         yield return new WaitForSeconds(startDelay);
 
-        // 2. 대화창 등장
-        ClearDialogueUI();
-        yield return StartCoroutine(FadeCanvasGroup(0f, 1f));
+        yield return StartCoroutine(FadeCanvasGroup(textBoxCanvasGroup, 0f, 1f, textBoxFadeDuration));
 
-        // 3. 주인공 첫 대사
+        // 1) 주인공 첫 대사
         yield return StartCoroutine(ShowLine(protagonistName, protagonistOpeningLine));
-
         yield return new WaitForSeconds(afterOpeningLineWait);
 
-        // 4. 대화창 사라짐
-        yield return StartCoroutine(FadeCanvasGroup(1f, 0f));
-
-        if (textBoxCanvasGroup != null)
-        {
-            textBoxCanvasGroup.gameObject.SetActive(false);
-        }
-
-        // 5. 모험가 등장
-        yield return new WaitForSeconds(warriorAppearDelay);
+        // 2) 문 열림 배경 교체 + 사운드 + 모험가 등장
+        OpenDoorBackground();
+        PlayDoorOpenSfx();
 
         if (warriorObject != null)
         {
+            if (warriorSpawnPoint != null)
+            {
+                warriorObject.transform.position = warriorSpawnPoint.position;
+            }
+
             warriorObject.SetActive(true);
         }
 
-        // 6. idle 재생
-        yield return null;
+        yield return new WaitForSeconds(afterDoorOpenWait);
 
         if (warriorAnimator != null)
         {
             warriorAnimator.Play(idleStateName, 0, 0f);
         }
 
-        // 7. 잠깐 뒤 fall 재생
         yield return new WaitForSeconds(idleDurationBeforeFall);
 
         if (warriorAnimator != null)
@@ -112,34 +160,74 @@ public class DialogueIntro : MonoBehaviour
             warriorAnimator.Play(fallStateName, 0, 0f);
         }
 
-        // 8. fall 후 잠시 대기
         yield return new WaitForSeconds(afterFallWait);
 
-        // 9. 대화창 다시 등장
-        ClearDialogueUI();
+        // 3) 이어지는 대사
+        yield return StartCoroutine(ShowLine(protagonistName, protagonistReactionLine));
+        yield return new WaitForSeconds(afterReactionLineWait);
+
+        yield return StartCoroutine(ShowLine(adventurerName, adventurerLine));
+        yield return new WaitForSeconds(afterAdventurerLineWait);
+
+        yield return StartCoroutine(ShowLine(protagonistName, protagonistResponseLine));
+        yield return new WaitForSeconds(afterResponseLineWait);
+
+        // 4) 대화 종료 후 튜토리얼 진입
+        yield return StartCoroutine(FadeCanvasGroup(textBoxCanvasGroup, 1f, 0f, textBoxFadeDuration));
 
         if (textBoxCanvasGroup != null)
         {
-            textBoxCanvasGroup.gameObject.SetActive(true);
-            textBoxCanvasGroup.alpha = 0f;
+            textBoxCanvasGroup.gameObject.SetActive(false);
         }
 
-        yield return StartCoroutine(FadeCanvasGroup(0f, 1f));
+        ShowPotionTutorial();
+    }
 
-        // 10. 주인공 반응
-        yield return StartCoroutine(ShowLine(protagonistName, protagonistReactionLine));
+    private IEnumerator ShowLine(string speaker, string line)
+    {
+        if (speakerText != null)
+        {
+            speakerText.text = speaker;
+        }
 
-        yield return new WaitForSeconds(afterReactionLineWait);
+        yield return StartCoroutine(TypeText(line));
+    }
 
-        // 11. 모험가 대사
-        yield return StartCoroutine(ShowLine(adventurerName, adventurerLine));
+    private IEnumerator TypeText(string text)
+    {
+        if (dialogueText == null)
+            yield break;
 
-        yield return new WaitForSeconds(afterAdventurerLineWait);
+        dialogueText.text = "";
 
-        // 12. 주인공 응답
-        yield return StartCoroutine(ShowLine(protagonistName, protagonistResponseLine));
+        foreach (char letter in text)
+        {
+            dialogueText.text += letter;
+            yield return new WaitForSeconds(typingSpeed);
+        }
+    }
 
-        yield return new WaitForSeconds(afterProtagonistResponseWait);
+    private IEnumerator FadeCanvasGroup(CanvasGroup group, float from, float to, float duration)
+    {
+        if (group == null)
+            yield break;
+
+        group.alpha = from;
+        group.blocksRaycasts = to > 0.95f;
+        group.interactable = to > 0.95f;
+
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            group.alpha = Mathf.Lerp(from, to, elapsed / duration);
+            yield return null;
+        }
+
+        group.alpha = to;
+        group.blocksRaycasts = to > 0.95f;
+        group.interactable = to > 0.95f;
     }
 
     private void ClearDialogueUI()
@@ -155,49 +243,111 @@ public class DialogueIntro : MonoBehaviour
         }
     }
 
-    private IEnumerator ShowLine(string speaker, string line)
+    private void ApplyClosedBackground()
     {
-        if (speakerText != null)
-        {
-            speakerText.text = speaker;
-        }
+        if (backgroundRenderer == null || closedDoorBackground == null)
+            return;
 
-        yield return StartCoroutine(TypeText(line));
+        backgroundRenderer.sprite = closedDoorBackground;
     }
 
-    private IEnumerator FadeCanvasGroup(float from, float to)
+    private void OpenDoorBackground()
     {
-        if (textBoxCanvasGroup == null)
-        {
-            yield break;
-        }
+        if (backgroundRenderer == null || openedDoorBackground == null)
+            return;
 
-        float elapsed = 0f;
-        textBoxCanvasGroup.alpha = from;
-
-        while (elapsed < fadeDuration)
-        {
-            elapsed += Time.deltaTime;
-            textBoxCanvasGroup.alpha = Mathf.Lerp(from, to, elapsed / fadeDuration);
-            yield return null;
-        }
-
-        textBoxCanvasGroup.alpha = to;
+        backgroundRenderer.sprite = openedDoorBackground;
     }
 
-    private IEnumerator TypeText(string text)
+    private void PlayDoorOpenSfx()
     {
-        if (dialogueText == null)
+        if (sfxAudioSource != null && doorOpenSfx != null)
         {
-            yield break;
+            sfxAudioSource.PlayOneShot(doorOpenSfx);
+        }
+    }
+
+    private void ShowPotionTutorial()
+    {
+        tutorialActive = true;
+
+        if (potionCraftButton != null)
+        {
+            potionCraftButton.gameObject.SetActive(true);
+            potionCraftButton.transform.localScale = potionButtonBaseScale;
         }
 
-        dialogueText.text = "";
-
-        foreach (char letter in text)
+        if (tutorialDimCanvasGroup != null)
         {
-            dialogueText.text += letter;
-            yield return new WaitForSeconds(typingSpeed);
+            tutorialDimCanvasGroup.gameObject.SetActive(true);
+            tutorialDimCanvasGroup.alpha = 0f;
+            tutorialDimCanvasGroup.blocksRaycasts = true;
+            tutorialDimCanvasGroup.interactable = true;
+            StartCoroutine(FadeCanvasGroup(tutorialDimCanvasGroup, 0f, 1f, tutorialFadeDuration));
+        }
+
+        if (tutorialGuideText != null)
+        {
+            tutorialGuideText.text = tutorialGuideMessage;
+        }
+    }
+
+    private void HideTutorialImmediate()
+    {
+        tutorialActive = false;
+
+        if (tutorialDimCanvasGroup != null)
+        {
+            tutorialDimCanvasGroup.alpha = 0f;
+            tutorialDimCanvasGroup.blocksRaycasts = false;
+            tutorialDimCanvasGroup.interactable = false;
+            tutorialDimCanvasGroup.gameObject.SetActive(false);
+        }
+    }
+
+    private void OnPotionCraftButtonClicked()
+    {
+        StartCoroutine(OpenPotionCraftPanelRoutine());
+    }
+
+    private IEnumerator OpenPotionCraftPanelRoutine()
+    {
+        tutorialActive = false;
+
+        if (potionCraftButton != null)
+        {
+            potionCraftButton.transform.localScale = potionButtonBaseScale;
+        }
+
+        if (tutorialDimCanvasGroup != null)
+        {
+            yield return StartCoroutine(FadeCanvasGroup(
+                tutorialDimCanvasGroup,
+                tutorialDimCanvasGroup.alpha,
+                0f,
+                tutorialFadeDuration
+            ));
+
+            tutorialDimCanvasGroup.gameObject.SetActive(false);
+        }
+
+        if (tutorialGuideText != null)
+        {
+            tutorialGuideText.text = "";
+        }
+
+        if (potionCraftPanel != null)
+        {
+            potionCraftPanel.SetActive(true);
+        }
+    }
+
+    // 닫기 버튼에 연결할 용도
+    public void ClosePotionCraftPanel()
+    {
+        if (potionCraftPanel != null)
+        {
+            potionCraftPanel.SetActive(false);
         }
     }
 }
